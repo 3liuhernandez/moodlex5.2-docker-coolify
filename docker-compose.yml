@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  moodle:
+    container_name: moodle_app
+    restart: always
+    build: .
+    volumes:
+      - moodle_html:/var/www/html
+      - moodle_data:/var/www/moodledata
+    ports:
+      - "80"
+
+volumes:
+  moodle_html:
+    name: moodle_html
+  moodle_data:
+    name: moodle_data
