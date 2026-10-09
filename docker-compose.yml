@@ -10,9 +10,15 @@ services:
       - moodle_data:/var/www/moodledata
     ports:
       - "80"
+    networks:
+      - coolify
+      - default
 
 volumes:
   moodle_html:
     name: moodle_html
   moodle_data:
     name: moodle_data
+networks:
+  coolify:
+    external: true
