@@ -116,3 +116,88 @@ $CFG->sslproxy = true;
 ```
 
 > **IMPORTANTE:** **NO** agregues `$CFG->reverseproxy = true;`. Coolify utiliza Traefik para gestionar el certificado SSL e interactúa con el contenedor mediante HTTP interno; el parámetro `reverseproxy` causará un error de bloqueo en pantalla (`Reverse proxy enabled so the server cannot be accessed directly`). Con `$CFG->sslproxy = true;` los estilos CSS, scripts y peticiones HTTPS funcionarán con normalidad.
+
+---
+
+## Algunos comandos utiles
+
+
+### > habilitarlo la directiva zend.exception_ignore_args
+
+Esa directiva (`zend.exception_ignore_args`) es una recomendación de seguridad para producción: evita que PHP exponga argumentos sensibles (como contraseñas o claves) en los registros de errores si ocurre una excepción.
+
+Al estar en color naranja ("Check"), **no bloquea la instalación** (si bajas verás que el botón Continuar sigue habilitado). Pero dejarlo en verde toma un solo comando.
+
+---
+
+#### Cómo habilitarlo
+
+1. Ve a la pestaña **Terminal** del contenedor en Coolify.
+
+
+2. Ejecuta este comando para agregar la directiva a la configuración de PHP y recargar Apache:
+
+```bash
+echo 'zend.exception_ignore_args = On' >> /usr/local/etc/php/conf.d/moodle.ini
+apache2ctl graceful
+
+```
+
+* **Cómo verificar:** Ejecuta `php -i | grep zend.exception_ignore_args`. Debe responder:
+```text
+zend.exception_ignore_args => On => On
+
+```
+
+---
+
+### > Desactivar el reverseproxy de moodle
+
+En Moodle:
+
+* `$CFG->reverseproxy = true;` le indica que **únicamente** acepte tráfico que pase por un proxy inverso configurado con cabeceras estrictas; si las cabeceras HTTP no coinciden con exactitud, bloquea la conexión con ese mensaje.
+* Lo que realmente necesita un contenedor detrás de Coolify/Traefik con SSL es **`$CFG->sslproxy = true;`** (sin `reverseproxy`). Fíjate que al menos ya cargó con diseño y estilos limpios.
+
+#### Solución
+
+Solo debemos retirar o comentar la línea de `reverseproxy` en `config.php`:
+
+1. Ve a la pestaña **Terminal** del contenedor en Coolify.
+2. Ejecuta este comando para quitar esa directiva:
+```bash
+sed -i '/reverseproxy/d' /var/www/html/config.php
+
+```
+
+
+3. Verifica que haya quedado bien ejecutando:
+```bash
+grep -E "sslproxy|reverseproxy" /var/www/html/config.php
+
+```
+
+
+* **Cómo verificar:** Deberías ver únicamente `$CFG->sslproxy = true;` (o `1`) y ninguna línea con `reverseproxy`.
+
+---
+
+### > Corregir HTTPS y SSL Proxy en `config.php` (para recuperar los estilos)
+
+Para que Moodle sirva los CSS con HTTPS y no bloquee el diseño:
+
+1. Si el instalador ya creó el archivo `config.php`, ejecuta en la terminal:
+```bash
+nano /var/www/html/config.php
+# O si prefieres inyectarlo directamente con sed:
+sed -i "/\$CFG->wwwroot/a \$CFG->sslproxy = true;\n\$CFG->routerconfigured = true;" /var/www/html/config.php
+
+```
+
+
+2. Asegúrate de que la línea de `wwwroot` tenga **`https://`**:
+```php
+$CFG->wwwroot = 'https://moodle.tudominio.com';
+$CFG->sslproxy = true;
+$CFG->routerconfigured = true;
+
+```
